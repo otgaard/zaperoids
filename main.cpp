@@ -33,6 +33,7 @@ bool zaperoids::initialise() {
         LOG_ERR("Failure to initialise font resources");
         return false;
     }
+
     return true;
 }
 
@@ -41,7 +42,7 @@ void zaperoids::update(double t, float dt) {
 }
 
 void zaperoids::draw() {
-    application::draw();
+    font_.draw(cam_);
 }
 
 void zaperoids::shutdown() {
@@ -49,7 +50,12 @@ void zaperoids::shutdown() {
 }
 
 void zaperoids::on_resize(int width, int height) {
+    LOG("resize", width, height);
     application::on_resize(width, height);
+    cam_.world_pos(vec3f(0,0,1));
+    cam_.frustum(45.f, float(width)/height, .5f, 30.f);
+    cam_.orthogonolise(vec3f(0,0,-1));
+    cam_.viewport(0, 0, width, height);
 }
 
 void zaperoids::on_mousemove(double x, double y) {
