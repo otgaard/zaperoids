@@ -3,6 +3,7 @@
 #include <zap/maths/algebra.hpp>
 #include <zap/host/GLFW/application.hpp>
 #include <renderer/camera.hpp>
+#include "vector_font.hpp"
 
 using namespace zap;
 using namespace zap::maths;
@@ -23,10 +24,16 @@ public:
 
 protected:
     camera cam_;
+    vector_font font_;
 };
 
 bool zaperoids::initialise() {
-    return application::initialise();
+    // Test the vector font
+    if(!font_.initialise()) {
+        LOG_ERR("Failure to initialise font resources");
+        return false;
+    }
+    return true;
 }
 
 void zaperoids::update(double t, float dt) {
