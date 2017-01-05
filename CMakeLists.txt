@@ -14,7 +14,7 @@ link_directories(
         ${CMAKE_SOURCE_DIR}/third_party/lib
         /Users/otgaard/Development/zap/third_party/lib)
 
-set(SOURCE_FILES main.cpp)
+set(SOURCE_FILES main.cpp vector_font.cpp vector_font.hpp)
 
 # DEPENDENCIES
 
