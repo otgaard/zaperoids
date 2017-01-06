@@ -81,7 +81,7 @@ static std::vector<std::vector<vec2f>> chars = {
 };
 
 
-vector_font::vector_font() : prim_count_(0), char_spacing(10) {
+vector_font::vector_font() : vertex_count_(0), char_spacing(10) {
 }
 
 vector_font::~vector_font() = default;
@@ -123,10 +123,11 @@ size_t vector_font::insert_string(const vec2f& P, const std::string& str) {
             auto idx = char_to_idx(ch);
             if(idx == INVALID_CHAR) lP += horz_spacing;
             else {
-                std::transform(chars[idx].begin(), chars[idx].end(), vbuf_.begin()+prim_count_, [&lP](const vec2f& P) {
-                    return vtx_p2c3_t(P + lP, vec3b(255, 255, 255));
+                assert(vertex_count_ + chars[idx].size() < vbuf_.vertex_count() && "Buffer Overflow");
+                std::transform(chars[idx].begin(), chars[idx].end(), vbuf_.begin()+vertex_count_, [&lP](const vec2f& cP) {
+                    return vtx_p2c3_t(cP + lP, vec3b(255, 255, 255));
                 });
-                prim_count_ += chars[idx].size();
+                vertex_count_ += chars[idx].size();
                 lP += horz_spacing;
             }
         }
@@ -140,9 +141,9 @@ void vector_font::erase_string(size_t id) {
 
 void vector_font::draw(const zap::renderer::camera& cam) {
     shdr_.bind();
-    shdr_.bind_uniform("PVM", cam.proj_view()*make_scale(0.0005f, 0.0005f, 1.f));
+    shdr_.bind_uniform("PVM", cam.proj_view() * make_scale(.5f, .5f, 1.f));
     mesh_.bind();
-    mesh_.draw(primitive_type::PT_LINES, 0, prim_count_);
+    mesh_.draw(primitive_type::PT_LINES, 0, vertex_count_);
     mesh_.release();
     shdr_.release();
 }

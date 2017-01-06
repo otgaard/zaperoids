@@ -11,7 +11,7 @@ using namespace zap::renderer;
 
 class zaperoids : public application {
 public:
-    zaperoids() : application("zaperoids", 600, 1024, false) { }
+    zaperoids() : application("zaperoids", 600, 1024, false), ortho_cam_(false) { }
 
     bool initialise() override final;
     void update(double t, float dt) override final;
@@ -23,7 +23,8 @@ public:
     void on_mousewheel(double xinc, double yinc) override final;
 
 protected:
-    camera cam_;
+    camera world_cam_;
+    camera ortho_cam_;
     vector_font font_;
 };
 
@@ -34,7 +35,7 @@ bool zaperoids::initialise() {
         return false;
     }
 
-    font_.insert_string(vec2f(0,0), "Hello");
+    font_.insert_string(vec2f(10,10), "Hello");
 
     return true;
 }
@@ -44,7 +45,7 @@ void zaperoids::update(double t, float dt) {
 }
 
 void zaperoids::draw() {
-    font_.draw(cam_);
+    font_.draw(ortho_cam_);
 }
 
 void zaperoids::shutdown() {
@@ -54,10 +55,15 @@ void zaperoids::shutdown() {
 void zaperoids::on_resize(int width, int height) {
     LOG("resize", width, height);
     application::on_resize(width, height);
-    cam_.world_pos(vec3f(0,0,1));
-    cam_.frustum(45.f, float(width)/height, .5f, 30.f);
-    cam_.orthogonolise(vec3f(0,0,-1));
-    cam_.viewport(0, 0, width, height);
+    world_cam_.world_pos(vec3f(0,0,1));
+    world_cam_.frustum(45.f, float(width)/height, .5f, 30.f);
+    world_cam_.orthogonolise(vec3f(0,0,-1));
+    world_cam_.viewport(0, 0, width, height);
+
+    ortho_cam_.world_pos(vec3f(0,0,1));
+    ortho_cam_.frustum(0, width, 0, height, 0, 1);
+    ortho_cam_.orthogonolise(vec3f(0,0,-1));
+    ortho_cam_.viewport(0, 0, width, height);
 }
 
 void zaperoids::on_mousemove(double x, double y) {
