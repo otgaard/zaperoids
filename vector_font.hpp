@@ -30,8 +30,9 @@ public:
     bool initialise();
 
     size_t insert_string(const vec2f& P, const std::string& str);
-    void erase_string(size_t id);
+    void erase_string(size_t idx, bool compress=true);
     void clear() { vertex_count_ = 0; }
+    size_t string_count() { return string_index_.size(); }
 
     void draw(const zap::renderer::camera& cam);
 
@@ -43,7 +44,6 @@ private:
 
     uint32_t vertex_count_;
     std::vector<vec2i> string_index_;
-
 };
 
 #endif //ZAPEROIDS_VECTOR_FONT_HPP

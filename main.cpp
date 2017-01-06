@@ -35,13 +35,15 @@ bool zaperoids::initialise() {
         return false;
     }
 
-    font_.insert_string(vec2f(10,10), "Hello");
+    font_.insert_string(vec2f(10,10), "Hello Asteroid Player");
+    font_.insert_string(vec2f(100,100), "Test Me");
+    font_.insert_string(vec2f(10,900), "Score 100");
 
     return true;
 }
 
 void zaperoids::update(double t, float dt) {
-    application::update(t, dt);
+    if(font_.string_count() > 2) font_.erase_string(1);
 }
 
 void zaperoids::draw() {

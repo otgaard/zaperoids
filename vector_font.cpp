@@ -119,6 +119,7 @@ size_t vector_font::insert_string(const vec2f& P, const std::string& str) {
     auto lP = P;
     vbuf_.bind();
     if(vbuf_.map(buffer_access::BA_WRITE_ONLY)) {
+        vec2i string_idx(vertex_count_, vertex_count_);
         for(auto& ch : str) {
             auto idx = char_to_idx(ch);
             if(idx == INVALID_CHAR) lP += horz_spacing;
@@ -131,19 +132,41 @@ size_t vector_font::insert_string(const vec2f& P, const std::string& str) {
                 lP += horz_spacing;
             }
         }
+        string_idx.y = vertex_count_;
+        string_index_.push_back(string_idx);
         vbuf_.unmap();
     }
     vbuf_.release();
 }
 
-void vector_font::erase_string(size_t id) {
+void vector_font::erase_string(size_t idx, bool compress) {
+    assert(idx < string_index_.size() && "Invalid string specified to erase_string");
+    if(compress) {
+        auto si = string_index_[idx];
+        vbuf_.bind();
+        if(vbuf_.map(buffer_access::BA_WRITE_ONLY)) {
+            std::copy(vbuf_.begin()+si.y, vbuf_.begin()+vertex_count_, vbuf_.begin()+si.x);
+            vbuf_.unmap();
+        }
+        vbuf_.release();
+
+        string_index_.erase(string_index_.begin() + idx);
+        auto diff = si.y - si.x;
+        std::transform(string_index_.begin()+idx, string_index_.end(), string_index_.begin()+idx, [&diff](const vec2i& v) {
+            return v - vec2i(diff, diff);
+        });
+    } else {
+        string_index_.erase(string_index_.begin() + idx);
+    }
 }
 
 void vector_font::draw(const zap::renderer::camera& cam) {
     shdr_.bind();
     shdr_.bind_uniform("PVM", cam.proj_view() * make_scale(.5f, .5f, 1.f));
     mesh_.bind();
-    mesh_.draw(primitive_type::PT_LINES, 0, vertex_count_);
+    for(auto& si : string_index_) {
+        mesh_.draw(primitive_type::PT_LINES, si.x, si.y - si.x);
+    }
     mesh_.release();
     shdr_.release();
 }
