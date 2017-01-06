@@ -1,7 +1,6 @@
 /* Created by Darren Otgaar on 2017/01/05. http://www.github.com/otgaard/zap */
 
 #include "vector_font.hpp"
-
 #include <zap/maths/io.hpp>
 
 /*
@@ -10,6 +9,9 @@
 
 using namespace zap::maths;
 using namespace zap::engine;
+
+constexpr static size_t INVALID_CHAR = size_t(-1);
+constexpr static vec2f char_dims = { 30.f, 50.f };
 
 static const char* const vector_font_vshdr = GLSL(
     uniform mat4 PVM;
@@ -79,7 +81,7 @@ static std::vector<std::vector<vec2f>> chars = {
 };
 
 
-vector_font::vector_font() : line_count_(0) {
+vector_font::vector_font() : prim_count_(0), char_spacing(10) {
 }
 
 vector_font::~vector_font() = default;
@@ -102,29 +104,45 @@ bool vector_font::initialise() {
 
     vbuf_.initialise(10000);            // Storage for 10k lines for now
 
-    // Test the alphabet & digits
-    if(vbuf_.map(buffer_access::BA_WRITE_ONLY)) {
-        // Test Char x
-        auto char_id = 35;
-        std::transform(chars[char_id].begin(), chars[char_id].end(), vbuf_.begin(), [](const vec2f& P) {
-            return vtx_p2c3_t(P, vec3b(255,255,255));
-        });
-        line_count_ += chars[char_id].size();
-        vbuf_.unmap();
-    }
-
     return true;
 }
 
-size_t vector_font::insert_string(const vec2f& P, const std::string& str) {
+size_t char_to_idx(char ch) {
+    if(ch >= 48 && ch <= 57) return size_t(ch - 48 + 26);
+    else if(ch >= 65 && ch <= 90) return size_t(ch - 65);
+    else if(ch >= 97 && ch <= 122) return size_t(ch - 97);
+    else return size_t(-1);
+}
 
+size_t vector_font::insert_string(const vec2f& P, const std::string& str) {
+    const auto horz_spacing = vec2f(char_dims[0] + char_spacing, 0);
+    auto lP = P;
+    vbuf_.bind();
+    if(vbuf_.map(buffer_access::BA_WRITE_ONLY)) {
+        for(auto& ch : str) {
+            auto idx = char_to_idx(ch);
+            if(idx == INVALID_CHAR) lP += horz_spacing;
+            else {
+                std::transform(chars[idx].begin(), chars[idx].end(), vbuf_.begin()+prim_count_, [&lP](const vec2f& P) {
+                    return vtx_p2c3_t(P + lP, vec3b(255, 255, 255));
+                });
+                prim_count_ += chars[idx].size();
+                lP += horz_spacing;
+            }
+        }
+        vbuf_.unmap();
+    }
+    vbuf_.release();
+}
+
+void vector_font::erase_string(size_t id) {
 }
 
 void vector_font::draw(const zap::renderer::camera& cam) {
     shdr_.bind();
     shdr_.bind_uniform("PVM", cam.proj_view()*make_scale(0.0005f, 0.0005f, 1.f));
     mesh_.bind();
-    mesh_.draw(primitive_type::PT_LINES, 0, line_count_);
+    mesh_.draw(primitive_type::PT_LINES, 0, prim_count_);
     mesh_.release();
     shdr_.release();
 }

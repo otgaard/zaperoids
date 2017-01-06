@@ -15,18 +15,23 @@ using zap::graphics::vtx_p2c3_t;
 using zap::graphics::vbuf_p2c3_t;
 using zap::engine::program;
 using zap::engine::mesh;
+using zap::maths::vec2i;
 using zap::maths::vec2f;
 
 using mesh_string_t = mesh<vertex_stream<vbuf_p2c3_t>, primitive_type::PT_LINES>;
 
 class vector_font {
 public:
+    int char_spacing;
+
     vector_font();
     ~vector_font();
 
     bool initialise();
 
     size_t insert_string(const vec2f& P, const std::string& str);
+    void erase_string(size_t id);
+    void clear() { prim_count_ = 0; }
 
     void draw(const zap::renderer::camera& cam);
 
@@ -36,7 +41,9 @@ private:
     vbuf_p2c3_t vbuf_;
     mesh_string_t mesh_;
 
-    uint32_t line_count_;
+    uint32_t prim_count_;
+    std::vector<vec2i> string_index_;
+
 };
 
 #endif //ZAPEROIDS_VECTOR_FONT_HPP

@@ -34,6 +34,8 @@ bool zaperoids::initialise() {
         return false;
     }
 
+    font_.insert_string(vec2f(0,0), "Hello");
+
     return true;
 }
 
