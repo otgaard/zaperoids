@@ -33,14 +33,6 @@ static const char* const vector_font_fshdr = GLSL(
         }
 );
 
-struct ship_command {
-    bool thrust;
-    bool left;
-    bool right;
-
-    ship_command() : thrust(false), left(false), right(false) { }
-};
-
 class zaperoids : public application {
 public:
     zaperoids() : application("zaperoids", 600, 1024, false), cam_(false) { }
@@ -90,11 +82,9 @@ bool zaperoids::initialise() {
 }
 
 void zaperoids::update(double t, float dt) {
-    if(command_.thrust) world_.thrust();
-    if(command_.left) world_.left();
-    if(command_.right) world_.right();
-
+    world_.command(0, command_);
     world_.update(t, dt);
+    command_.fire = false;
 }
 
 void zaperoids::draw() {
@@ -114,6 +104,7 @@ void zaperoids::on_resize(int width, int height) {
     cam_.frustum(0, width, 0, height, 0, 1);
     cam_.orthogonolise(vec3f(0,0,-1));
     cam_.viewport(0, 0, width, height);
+    world_.set_world_size(width, height);
 }
 
 void zaperoids::on_keypress(char ch) {
@@ -121,6 +112,7 @@ void zaperoids::on_keypress(char ch) {
     if(ch == 9) command_.thrust = true;
     else if(ch == 7) command_.left = true;
     else if(ch == 6) command_.right = true;
+    else if(ch == 32) command_.fire = true;
 }
 
 void zaperoids::on_keyrelease(char ch) {

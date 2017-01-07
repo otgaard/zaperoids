@@ -4,6 +4,16 @@
 
 #include "common.hpp"
 
+struct ship_command {
+    bool thrust;
+    bool left;
+    bool right;
+    bool fire;
+    bool warp;
+
+    ship_command() : thrust(false), left(false), right(false), fire(false), warp(false) { }
+};
+
 class world {
 public:
     world();
@@ -11,9 +21,9 @@ public:
 
     bool generate(int level=1, int players=1);
 
-    void thrust();
-    void left();
-    void right();
+    void set_world_size(int width, int height);
+
+    void command(int player, const ship_command& cmd);
 
     void update(double t, float dt);
     void draw(const camera& cam, program& shdr);
