@@ -91,6 +91,9 @@ bool zaperoids::initialise() {
 
 void zaperoids::update(double t, float dt) {
     if(command_.thrust) world_.thrust();
+    if(command_.left) world_.left();
+    if(command_.right) world_.right();
+
     world_.update(t, dt);
 }
 
@@ -116,11 +119,15 @@ void zaperoids::on_resize(int width, int height) {
 void zaperoids::on_keypress(char ch) {
     LOG(int(ch));
     if(ch == 9) command_.thrust = true;
+    else if(ch == 7) command_.left = true;
+    else if(ch == 6) command_.right = true;
 }
 
 void zaperoids::on_keyrelease(char ch) {
     LOG(int(ch));
     if(ch == 9) command_.thrust = false;
+    else if(ch == 7) command_.left = false;
+    else if(ch == 6) command_.right = false;
 }
 
 int main(int argc, char* argv[]) {

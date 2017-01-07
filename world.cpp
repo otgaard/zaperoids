@@ -27,8 +27,9 @@ struct body {
     vec2i vbuf_idx;
     transform3f transform;
     vec2f velocity;
+    float rotation;
 
-    body() = default;
+    body() : vbuf_idx(0, 0), velocity(0.f, 0.f), rotation(0.f) { }
     body(const body& rhs) = default;
     body& operator=(const body& rhs) = default;
 };
@@ -39,7 +40,7 @@ struct bullet {
     float age;
     float distance_travelled;
 
-    bullet() = default;
+    bullet() : vbuf_idx(0), velocity(0.f, 0.f), age(0.f), distance_travelled(0.f) { }
     bullet(const bullet& rhs) = default;
     bullet& operator=(const bullet& rhs) = default;
 };
@@ -76,7 +77,7 @@ bool world::generate(int level, int players) {
 
     if(s.vbuf.map(buffer_access::BA_WRITE_ONLY)) {
         std::transform(ship_shape.begin(), ship_shape.end(), s.vbuf.begin(), [&player_ship](const vec2f& sP) {
-            return vtx_p2c3_t(player_ship.transform.translation() + sP, vec3b(255,255,255));
+            return vtx_p2c3_t(player_ship.transform.affine().transform(sP), vec3b(255,255,255));
         });
         s.vbuf.unmap();
     }
@@ -94,12 +95,13 @@ void world::update(double t, float dt) {
     if(s1P.y > 1024) s1P.y = 0; else if(s1P.y < 0) s1P.y = 1024;
 
     player_ship.transform.translate(s1P);
+    player_ship.transform.rotate(make_rotation(player_ship.rotation));
 
     // Update Buffer
     s.vbuf.bind();
     if(s.vbuf.map(buffer_access::BA_WRITE_ONLY)) {
         std::transform(ship_shape.begin(), ship_shape.end(), s.vbuf.begin(), [=](const vec2f& sP) {
-            return vtx_p2c3_t(s.ships[0].transform.translation() + sP, vec3b(255,255,255));
+            return vtx_p2c3_t(s.ships[0].transform.affine().transform(sP), vec3b(255,255,255));
         });
         s.vbuf.unmap();
     }
@@ -118,9 +120,9 @@ void world::thrust() {
 }
 
 void world::left() {
-
+    s.ships[0].rotation += 0.1f;
 }
 
 void world::right() {
-
+    s.ships[0].rotation -= 0.1f;
 }
