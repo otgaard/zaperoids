@@ -2,6 +2,7 @@
 #include "world.hpp"
 #include <zap/maths/rand_lcg.hpp>
 #include <zap/maths/geometry/hull.hpp>
+#include <zap/maths/geometry/disc.hpp>
 #include <zap/maths/transform.hpp>
 
 #include <zap/maths/io.hpp>
@@ -88,13 +89,13 @@ bool world::generate(int level, int players) {
     player_ship.velocity = vec2f(0,0);
     s.ships.push_back(player_ship);
 
-    s.asteroids.reserve(10);
-    for(int i = 0; i != 10; ++i) {
+    s.asteroids.reserve(50);
+    for(int i = 0; i != 5; ++i) {
         body asteroid;
         asteroid.transform.translate(vec2f(s.rand.random() * s.width, s.rand.random() * s.height));
         asteroid.rotation = 5.f*s.rand.random_s();
         asteroid.orientation = float(TWO_PI)*s.rand.random();
-        asteroid.transform.uniform_scale(s.rand.random()*20);
+        asteroid.transform.uniform_scale(std::max(s.rand.random()*40, 4.f));
         asteroid.velocity.set(s.rand.random_s() * 30, s.rand.random_s() * 30);
         s.asteroids.push_back(asteroid);
     }
@@ -153,6 +154,41 @@ void world::update(double t, float dt) {
         b.distance_travelled += dv.length_sqr();
 
         wrap_position(b.position, s.width, s.height);
+    }
+
+    // Collision Detection
+    for(auto& b : s.bullets) {
+        if(b.distance_travelled >= max_bullet_range) continue;
+        for(auto it = s.asteroids.begin(); it != s.asteroids.end(); ++it) {
+            auto d = maths::geometry::disc<float>(it->transform.translation(), it->transform.uniform_scale());
+            if(distance(b.position, d) <= 0.f) {
+                auto old_asteroid = *it;
+                s.asteroids.erase(it);
+                b.distance_travelled = max_bullet_range;
+                if(old_asteroid.transform.uniform_scale() > 4.f) {
+                    auto new_size = std::max(old_asteroid.transform.uniform_scale()/1.8f, 4.f);
+                    auto N = perp(b.velocity).normalise();
+                    auto mag = old_asteroid.velocity.length();
+
+                    body A;
+                    A.transform.translate(old_asteroid.transform.translation()+new_size*N);
+                    A.rotation = 5.f*s.rand.random_s();
+                    A.orientation = float(TWO_PI)*s.rand.random();
+                    A.transform.uniform_scale(new_size);
+                    A.velocity = 2.f * mag * N;
+                    s.asteroids.push_back(A);
+
+                    body B;
+                    B.transform.translate(old_asteroid.transform.translation()-new_size*N);
+                    B.rotation = 5.f*s.rand.random_s();
+                    B.orientation = float(TWO_PI)*s.rand.random();
+                    B.transform.uniform_scale(new_size);
+                    B.velocity = -2.f * mag * N;
+                    s.asteroids.push_back(B);
+                }
+                break;
+            }
+        }
     }
 
     auto ne = std::remove_if(s.bullets.begin(), s.bullets.end(), [](auto& b) {
