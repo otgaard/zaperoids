@@ -81,7 +81,7 @@ static std::vector<std::vector<vec2f>> chars = {
 };
 
 
-vector_font::vector_font() : vertex_count_(0), char_spacing(10) {
+vector_font::vector_font() : char_spacing(10), scale_(.5f), inv_scale_(2.f), vertex_count_(0) {
 }
 
 vector_font::~vector_font() = default;
@@ -116,7 +116,7 @@ size_t char_to_idx(char ch) {
 
 size_t vector_font::insert_string(const vec2f& P, const std::string& str) {
     const auto horz_spacing = vec2f(char_dims[0] + char_spacing, 0);
-    auto lP = P;
+    auto lP = inv_scale_ * P;
     vbuf_.bind();
     if(vbuf_.map(buffer_access::BA_WRITE_ONLY)) {
         vec2i string_idx(vertex_count_, vertex_count_);
@@ -162,11 +162,15 @@ void vector_font::erase_string(size_t idx, bool compress) {
 
 void vector_font::draw(const zap::renderer::camera& cam) {
     shdr_.bind();
-    shdr_.bind_uniform("PVM", cam.proj_view() * make_scale(.5f, .5f, 1.f));
+    shdr_.bind_uniform("PVM", cam.proj_view() * make_scale(scale_, scale_, 1.f));
     mesh_.bind();
     for(auto& si : string_index_) {
         mesh_.draw(primitive_type::PT_LINES, si.x, si.y - si.x);
     }
     mesh_.release();
     shdr_.release();
+}
+
+AABB2i vector_font::string_AABB(const std::string& str) {
+    return AABB2i(vec2i(0,0), scale_*str.length()*(char_dims.x+char_spacing)-char_spacing, scale_*char_dims.y);
 }
