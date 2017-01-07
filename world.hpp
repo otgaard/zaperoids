@@ -11,8 +11,12 @@ public:
 
     bool generate(int level=1, int players=1);
 
+    void thrust();
+    void left();
+    void right();
+
     void update(double t, float dt);
-    void draw(const camera& cam);
+    void draw(const camera& cam, program& shdr);
 
 protected:
 

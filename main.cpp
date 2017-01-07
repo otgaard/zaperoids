@@ -4,14 +4,46 @@
 #include <zap/host/GLFW/application.hpp>
 #include <renderer/camera.hpp>
 #include "vector_font.hpp"
+#include "world.hpp"
 
 using namespace zap;
 using namespace zap::maths;
 using namespace zap::renderer;
 
+// Single shader for whole game for now
+static const char* const vector_font_vshdr = GLSL(
+        uniform mat4 PVM;
+
+        in vec2 position;
+        in ivec3 colour1;
+
+        out vec3 colour;
+
+        void main() {
+            colour = vec3(colour1.r/255., colour1.g/255., colour1.b/255.);
+            gl_Position = PVM * vec4(position, 0., 1.);
+        }
+);
+
+static const char* const vector_font_fshdr = GLSL(
+        in vec3 colour;
+        out vec4 frag_colour;
+        void main() {
+            frag_colour = vec4(colour, 1.);
+        }
+);
+
+struct ship_command {
+    bool thrust;
+    bool left;
+    bool right;
+
+    ship_command() : thrust(false), left(false), right(false) { }
+};
+
 class zaperoids : public application {
 public:
-    zaperoids() : application("zaperoids", 600, 1024, false), ortho_cam_(false) { }
+    zaperoids() : application("zaperoids", 600, 1024, false), cam_(false) { }
 
     bool initialise() override final;
     void update(double t, float dt) override final;
@@ -19,16 +51,26 @@ public:
     void shutdown() override final;
 
     void on_resize(int width, int height) override final;
-    void on_mousemove(double x, double y) override final;
-    void on_mousewheel(double xinc, double yinc) override final;
+
+    void on_keypress(char ch) override;
+    void on_keyrelease(char ch) override;
 
 protected:
-    camera world_cam_;
-    camera ortho_cam_;
+    camera cam_;
     vector_font font_;
+    world world_;
+    program shdr_;
+    ship_command command_;
 };
 
 bool zaperoids::initialise() {
+    shdr_.add_shader(zap::engine::shader_type::ST_VERTEX, vector_font_vshdr);
+    shdr_.add_shader(zap::engine::shader_type::ST_FRAGMENT, vector_font_fshdr);
+    if(!shdr_.link()) {
+        LOG_ERR("Failed to compile/link vector_font shader resources.");
+        return false;
+    }
+
     // Test the vector font
     if(!font_.initialise()) {
         LOG_ERR("Failure to initialise font resources");
@@ -36,20 +78,27 @@ bool zaperoids::initialise() {
     }
 
     font_.set_scale(0.334f);
-    font_.insert_string(vec2f(10,10), "Hello Asteroid Player");
-    font_.insert_string(vec2f(100,100), "Test Me");
+    auto aabb = font_.string_AABB("Score 0");
+    font_.insert_string(vec2f(600 - 20 - aabb.width(), 1024-10-aabb.height()), "Score 0");
 
-    auto aabb = font_.string_AABB("Score 100");
-    font_.insert_string(vec2f(600 - 20 - aabb.width(), 1024-10-aabb.height()), "Score 100");
+    if(!world_.generate(1,1)) {
+        LOG_ERR("Failed to create world simulation");
+        return false;
+    }
 
     return true;
 }
 
 void zaperoids::update(double t, float dt) {
+    if(command_.thrust) world_.thrust();
+    world_.update(t, dt);
 }
 
 void zaperoids::draw() {
-    font_.draw(ortho_cam_);
+    shdr_.bind();
+    world_.draw(cam_, shdr_);
+    font_.draw(cam_, shdr_);
+    shdr_.release();
 }
 
 void zaperoids::shutdown() {
@@ -57,25 +106,21 @@ void zaperoids::shutdown() {
 }
 
 void zaperoids::on_resize(int width, int height) {
-    LOG("resize", width, height);
     application::on_resize(width, height);
-    world_cam_.world_pos(vec3f(0,0,1));
-    world_cam_.frustum(45.f, float(width)/height, .5f, 30.f);
-    world_cam_.orthogonolise(vec3f(0,0,-1));
-    world_cam_.viewport(0, 0, width, height);
-
-    ortho_cam_.world_pos(vec3f(0,0,1));
-    ortho_cam_.frustum(0, width, 0, height, 0, 1);
-    ortho_cam_.orthogonolise(vec3f(0,0,-1));
-    ortho_cam_.viewport(0, 0, width, height);
+    cam_.world_pos(vec3f(0,0,1));
+    cam_.frustum(0, width, 0, height, 0, 1);
+    cam_.orthogonolise(vec3f(0,0,-1));
+    cam_.viewport(0, 0, width, height);
 }
 
-void zaperoids::on_mousemove(double x, double y) {
-    application::on_mousemove(x, y);
+void zaperoids::on_keypress(char ch) {
+    LOG(int(ch));
+    if(ch == 9) command_.thrust = true;
 }
 
-void zaperoids::on_mousewheel(double xinc, double yinc) {
-    application::on_mousewheel(xinc, yinc);
+void zaperoids::on_keyrelease(char ch) {
+    LOG(int(ch));
+    if(ch == 9) command_.thrust = false;
 }
 
 int main(int argc, char* argv[]) {

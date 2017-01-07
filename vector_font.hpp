@@ -29,11 +29,9 @@ public:
     void clear() { vertex_count_ = 0; }
     size_t string_count() { return string_index_.size(); }
 
-    void draw(const zap::renderer::camera& cam);
+    void draw(const zap::renderer::camera& cam, program& shdr);
 
 private:
-    program shdr_;
-
     vbuf_p2c3_t vbuf_;
     mesh_string_t mesh_;
 

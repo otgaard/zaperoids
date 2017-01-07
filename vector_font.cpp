@@ -13,28 +13,6 @@ using namespace zap::engine;
 constexpr static size_t INVALID_CHAR = size_t(-1);
 constexpr static vec2f char_dims = { 30.f, 50.f };
 
-static const char* const vector_font_vshdr = GLSL(
-    uniform mat4 PVM;
-
-    in vec2 position;
-    in ivec3 colour1;
-
-    out vec3 colour;
-
-    void main() {
-        colour = vec3(colour1.r/255., colour1.g/255., colour1.b/255.);
-        gl_Position = PVM * vec4(position, 0., 1.);
-    }
-);
-
-static const char* const vector_font_fshdr = GLSL(
-    in vec3 colour;
-    out vec4 frag_colour;
-    void main() {
-        frag_colour = vec4(colour, 1.);
-    }
-);
-
 // Lower case (65 - 90), Upper case (97 - 122), Digits (48 - 57)
 static std::vector<std::vector<vec2f>> chars = {
         { {0,0}, {0,35}, {0,35}, {15,50}, {15,50}, {30,35}, {30,35}, {30,0}, {0,20}, {30,20} },             // A
@@ -87,13 +65,6 @@ vector_font::vector_font() : char_spacing(10), scale_(.5f), inv_scale_(2.f), ver
 vector_font::~vector_font() = default;
 
 bool vector_font::initialise() {
-    shdr_.add_shader(shader_type::ST_VERTEX, vector_font_vshdr);
-    shdr_.add_shader(shader_type::ST_FRAGMENT, vector_font_fshdr);
-    if(!shdr_.link()) {
-        LOG_ERR("Failed to compile/link vector_font shader resources.");
-        return false;
-    }
-
     if(!vbuf_.allocate() || !mesh_.allocate()) {
         LOG_ERR("Error initialising vector_font resources.");
         return false;
@@ -160,15 +131,13 @@ void vector_font::erase_string(size_t idx, bool compress) {
     }
 }
 
-void vector_font::draw(const zap::renderer::camera& cam) {
-    shdr_.bind();
-    shdr_.bind_uniform("PVM", cam.proj_view() * make_scale(scale_, scale_, 1.f));
+void vector_font::draw(const zap::renderer::camera& cam, program& shdr) {
+    shdr.bind_uniform("PVM", cam.proj_view() * make_scale(scale_, scale_, 1.f));
     mesh_.bind();
     for(auto& si : string_index_) {
         mesh_.draw(primitive_type::PT_LINES, si.x, si.y - si.x);
     }
     mesh_.release();
-    shdr_.release();
 }
 
 AABB2i vector_font::string_AABB(const std::string& str) {
