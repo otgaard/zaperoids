@@ -71,9 +71,11 @@ bool zaperoids::initialise() {
 
     font_.set_scale(0.334f);
     auto aabb = font_.string_AABB("Score 0");
-    font_.insert_string(vec2f(600 - 20 - aabb.width(), 1024-10-aabb.height()), "Score 0");
+    font_.insert_string(vec2f(600 - 20 - aabb.width(), 1024 - 10 - aabb.height()), "Score 0");
 
-    if(!world_.generate(1,1)) {
+    world_.set_world_size(600,1024);    // For the generator
+
+    if(!world_.generate(1, 1)) {
         LOG_ERR("Failed to create world simulation");
         return false;
     }
@@ -108,7 +110,7 @@ void zaperoids::on_resize(int width, int height) {
 }
 
 void zaperoids::on_keypress(char ch) {
-    LOG(int(ch));
+    //LOG(int(ch));
     if(ch == 9) command_.thrust = true;
     else if(ch == 7) command_.left = true;
     else if(ch == 6) command_.right = true;
@@ -116,7 +118,7 @@ void zaperoids::on_keypress(char ch) {
 }
 
 void zaperoids::on_keyrelease(char ch) {
-    LOG(int(ch));
+    //LOG(int(ch));
     if(ch == 9) command_.thrust = false;
     else if(ch == 7) command_.left = false;
     else if(ch == 6) command_.right = false;
