@@ -166,7 +166,7 @@ void world::update(double t, float dt) {
                 s.asteroids.erase(it);
                 b.distance_travelled = max_bullet_range;
                 if(old_asteroid.transform.uniform_scale() > 4.f) {
-                    auto new_size = std::max(old_asteroid.transform.uniform_scale()/1.8f, 4.f);
+                    auto new_size = std::max(old_asteroid.transform.uniform_scale()/3.f, 4.f);
                     auto N = perp(b.velocity).normalise();
                     auto mag = old_asteroid.velocity.length();
 
@@ -209,15 +209,16 @@ void world::update(double t, float dt) {
 
 void world::draw(const camera& cam, program& shdr) {
     s.mesh.bind();
-    shdr.bind_uniform("PVM", cam.proj_view()*s.ships[0].transform.gl_matrix());
+    auto pvm_loc = shdr.uniform_location("PVM");
+    shdr.bind_uniform(pvm_loc, cam.proj_view()*s.ships[0].transform.gl_matrix());
     s.mesh.draw(primitive_type::PT_LINES, 0, ship_shape.size());
 
     for(auto& asteroid : s.asteroids) {
-        shdr.bind_uniform("PVM", cam.proj_view()*asteroid.transform.gl_matrix());
+        shdr.bind_uniform(pvm_loc, cam.proj_view()*asteroid.transform.gl_matrix());
         s.mesh.draw(primitive_type::PT_LINES, 100, asteroid_shapes[0].size());
     }
 
-    shdr.bind_uniform("PVM", cam.proj_view());
+    shdr.bind_uniform(pvm_loc, cam.proj_view());
     if(s.bullets.size() > 0) s.mesh.draw(primitive_type::PT_POINTS, 1000, s.bullets.size());
 
     s.mesh.release();

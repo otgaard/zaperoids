@@ -1,9 +1,12 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.4)
 project(zaperoids)
 
 set(CMAKE_CXX_STANDARD 14)
 
+if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 add_definitions(-DLOGGING_ENABLED)
+elseif(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+endif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 
 include_directories(
         ${CMAKE_SOURCE_DIR}/third_party/include
@@ -15,8 +18,6 @@ link_directories(
         /Users/otgaard/Development/zap/third_party/lib)
 
 set(SOURCE_FILES main.cpp vector_font.cpp vector_font.hpp world.cpp world.hpp common.hpp)
-
-# DEPENDENCIES
 
 if(APPLE)
     find_library(COCOA Cocoa REQUIRED)

@@ -33,6 +33,12 @@ static const char* const vector_font_fshdr = GLSL(
         }
 );
 
+enum class game_state {
+    GS_MENU,
+    GS_PLAYING,
+    GS_PAUSED
+};
+
 class zaperoids : public application {
 public:
     zaperoids() : application("zaperoids", 600, 1024, false), cam_(false) { }
@@ -80,6 +86,8 @@ bool zaperoids::initialise() {
         return false;
     }
 
+    shdr_.bind();
+
     return true;
 }
 
@@ -90,10 +98,10 @@ void zaperoids::update(double t, float dt) {
 }
 
 void zaperoids::draw() {
-    shdr_.bind();
+    //shdr_.bind();
     world_.draw(cam_, shdr_);
     font_.draw(cam_, shdr_);
-    shdr_.release();
+    //shdr_.release();
 }
 
 void zaperoids::shutdown() {
@@ -110,7 +118,6 @@ void zaperoids::on_resize(int width, int height) {
 }
 
 void zaperoids::on_keypress(char ch) {
-    //LOG(int(ch));
     if(ch == 9) command_.thrust = true;
     else if(ch == 7) command_.left = true;
     else if(ch == 6) command_.right = true;
@@ -118,7 +125,6 @@ void zaperoids::on_keypress(char ch) {
 }
 
 void zaperoids::on_keyrelease(char ch) {
-    //LOG(int(ch));
     if(ch == 9) command_.thrust = false;
     else if(ch == 7) command_.left = false;
     else if(ch == 6) command_.right = false;

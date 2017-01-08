@@ -87,6 +87,7 @@ size_t char_to_idx(char ch) {
 
 size_t vector_font::insert_string(const vec2f& P, const std::string& str) {
     const auto horz_spacing = vec2f(char_dims[0] + char_spacing, 0);
+    size_t new_idx = size_t(-1);
     auto lP = inv_scale_ * P;
     vbuf_.bind();
     if(vbuf_.map(buffer_access::BA_WRITE_ONLY)) {
@@ -104,10 +105,12 @@ size_t vector_font::insert_string(const vec2f& P, const std::string& str) {
             }
         }
         string_idx.y = vertex_count_;
+        new_idx = string_index_.size();
         string_index_.push_back(string_idx);
         vbuf_.unmap();
     }
     vbuf_.release();
+    return new_idx;
 }
 
 void vector_font::erase_string(size_t idx, bool compress) {
