@@ -90,10 +90,17 @@ bool zaperoids::initialise() {
 void zaperoids::update(double t, float dt) {
     // Check if the game is over
     if(game_.game_over()) {
+        if(score_string_ == size_t(-1)) return;
+        if(score_string_ != size_t(-1)) font_.erase_string(score_string_);
+        score_string_ = size_t(-1);
+
         std::string game_over = std::string("Game Over");
         auto aabb = font_.string_AABB(game_over);
-        if(score_string_ != size_t(-1)) font_.erase_string(score_string_);
-        score_string_ = font_.insert_string(vec2f(600 - aabb.width(), 1024 - aabb.height())/2.f, game_over);
+        font_.insert_string(vec2f(sc_width_ - aabb.width(), sc_height_ - aabb.height())/2.f, game_over);
+
+        std::string press_1 = std::string("Press 1 to Start");
+        aabb = font_.string_AABB(press_1);
+        font_.insert_string(vec2f(sc_width_ - aabb.width(), sc_height_ + 2.f*aabb.height())/2.f, press_1);
     } else {
         world_.command(0, command_);
         world_.update(t, dt);
@@ -130,6 +137,12 @@ void zaperoids::on_keypress(char ch) {
     else if(ch == 7) command_.left = true;
     else if(ch == 6) command_.right = true;
     else if(ch == 32) command_.fire = true;
+
+    if(ch == 49 && game_.game_over()) {
+        font_.clear();
+        game_.reset();
+        world_.generate_level(&game_, game_.get_level());
+    }
 }
 
 void zaperoids::on_keyrelease(char ch) {

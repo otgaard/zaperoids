@@ -28,6 +28,12 @@ public:
     bool game_over() const { return players_ == 1 ? lives_[0] == 0 : lives_[0] == 0 || lives_[1] == 0; }
     int dead_player() const { return players_ == 2 ? (lives_[0] == 0 ? 0 : 1) : 0; }
 
+    void reset() {
+        lives_[0] = 3; lives_[1] = 3;
+        score_[0] = 0; score_[1] = 0;
+        level_ = 1;
+    }
+
 private:
     int players_;
     int level_;

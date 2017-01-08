@@ -38,7 +38,7 @@ public:
 
     size_t insert_string(const vec2f& P, const std::string& str);
     void erase_string(size_t idx, bool compress=true);
-    void clear() { vertex_count_ = 0; }
+    void clear() { vertex_count_ = 0; string_index_.clear(); }
     size_t string_count() { return string_index_.size(); }
 
     void draw(const zap::renderer::camera& cam, program& shdr);

@@ -121,6 +121,8 @@ bool world::generate() {
 bool world::generate_level(game* game_ptr, int level) {
     s.game_ptr = game_ptr;
 
+    s.regenerating = false;
+
     body player_ship;
     player_ship.transform.translate(vec2f(s.width/2.f, s.height/2.f));
     player_ship.velocity = vec2f(0,0);
@@ -155,6 +157,8 @@ inline int compute_points(float size) {
 }
 
 void world::update(double t, float dt) {
+    if(s.game_ptr->game_over()) return;
+
     // Update Physics
     auto& player_ship = s.ships[0];
     auto s1P = player_ship.transform.translation();
@@ -240,6 +244,12 @@ void world::update(double t, float dt) {
                 s.regen_time = 2.f;
                 s.regenerating = true;
                 s.game_ptr->kill(0);
+
+                if(s.game_ptr->game_over()) {
+                    s.asteroids.clear();
+                    s.bullets.clear();
+                    s.ships.clear();
+                }
             }
         }
     } else {
