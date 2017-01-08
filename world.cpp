@@ -226,6 +226,13 @@ void world::update(double t, float dt) {
         }
     }
 
+    // If all asteroids are destroyed, start the next level
+    if(s.asteroids.empty()) {
+        s.ships.clear();
+        s.game_ptr->set_level(s.game_ptr->get_level()+1);
+        generate_level(s.game_ptr, s.game_ptr->get_level());
+    }
+
     auto ne = std::remove_if(s.bullets.begin(), s.bullets.end(), [](auto& b) {
         return b.distance_travelled > max_bullet_range;
     });
