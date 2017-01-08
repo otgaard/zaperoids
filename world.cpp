@@ -54,7 +54,7 @@ struct bullet {
     vec2f velocity;
     float distance_travelled;
 
-    bullet(int owner=0) : position(0.f, 0.f), velocity(0.f, 0.f), distance_travelled(0.f) { }
+    bullet(int owner=0) : owner(owner), position(0.f, 0.f), velocity(0.f, 0.f), distance_travelled(0.f) { }
     bullet(const bullet& rhs) = default;
     bullet& operator=(const bullet& rhs) = default;
 };
@@ -117,6 +117,8 @@ bool world::generate() {
 }
 
 bool world::generate_level(game* game_ptr, int level) {
+    s.game_ptr = game_ptr;
+
     body player_ship;
     player_ship.transform.translate(vec2f(s.width/2.f, s.height/2.f));
     player_ship.velocity = vec2f(0,0);
@@ -128,7 +130,7 @@ bool world::generate_level(game* game_ptr, int level) {
         asteroid.transform.translate(vec2f(s.rand.random() * s.width, s.rand.random() * s.height));
         asteroid.rotation = 5.f*s.rand.random_s();
         asteroid.orientation = float(TWO_PI)*s.rand.random();
-        asteroid.transform.uniform_scale(std::max(s.rand.random()*40, 4.f));
+        asteroid.transform.uniform_scale(std::max(s.rand.random()*30, 4.f));
         asteroid.velocity.set(s.rand.random_s() * 30, s.rand.random_s() * 30);
         s.asteroids.push_back(asteroid);
     }
@@ -140,6 +142,13 @@ bool world::generate_level(game* game_ptr, int level) {
 inline void wrap_position(vec2f& P, float width, float height) {
     if(P.x > width) P.x = 0; else if(P.x < 0) P.x = width;
     if(P.y > height) P.y = 0; else if(P.y < 0) P.y = height;
+}
+
+inline int compute_points(float size) {
+    if(size <= 4.f) return 100;
+    else if(size > 4.f && size <= 10.f) return 50;
+    else if(size > 10.f && size <= 20.f) return 20;
+    else return 10;
 }
 
 void world::update(double t, float dt) {
@@ -182,8 +191,10 @@ void world::update(double t, float dt) {
                 auto old_asteroid = *it;
                 s.asteroids.erase(it);
                 b.distance_travelled = max_bullet_range;
-                if(old_asteroid.transform.uniform_scale() > 4.f) {
-                    auto new_size = std::max(old_asteroid.transform.uniform_scale()/3.f, 4.f);
+                auto old_size = old_asteroid.transform.uniform_scale();
+                s.game_ptr->add_points(b.owner, compute_points(old_size));
+                if(old_size > 4.f) {
+                    auto new_size = std::max(old_size/2.f, 4.f);
                     auto N = perp(b.velocity).normalise();
                     auto mag = old_asteroid.velocity.length();
 

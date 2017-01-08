@@ -36,7 +36,7 @@ static const char* const vector_font_fshdr = GLSL(
 
 class zaperoids : public application {
 public:
-    zaperoids() : application("zaperoids", 600, 1024, false), cam_(false) { }
+    zaperoids() : application("zaperoids", 600, 1024, false), cam_(false), score_string_(size_t(-1)) { }
 
     bool initialise() override final;
     void update(double t, float dt) override final;
@@ -55,6 +55,7 @@ protected:
     program shdr_;
     ship_command command_;
     game game_;
+    size_t score_string_;
 };
 
 bool zaperoids::initialise() {
@@ -72,9 +73,6 @@ bool zaperoids::initialise() {
     }
 
     font_.set_scale(0.334f);
-    auto aabb = font_.string_AABB("Score 0");
-    font_.insert_string(vec2f(600 - 20 - aabb.width(), 1024 - 10 - aabb.height()), "Score 0");
-
     world_.set_world_size(600,1024);    // For the generator
 
     if(!world_.generate()) {
@@ -93,6 +91,12 @@ void zaperoids::update(double t, float dt) {
     world_.command(0, command_);
     world_.update(t, dt);
     command_.fire = false;
+
+    // Update the score
+    std::string score = std::string("Score ") + lexical_cast<int>(game_.get_points(0));
+    auto aabb = font_.string_AABB(score);
+    if(score_string_ != size_t(-1)) font_.erase_string(score_string_);
+    score_string_ = font_.insert_string(vec2f(600 - 20 - aabb.width(), 1024 - 10 - aabb.height()), score);
 }
 
 void zaperoids::draw() {

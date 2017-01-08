@@ -2,8 +2,20 @@
 #ifndef ZAPEROIDS_VECTOR_FONT_HPP
 #define ZAPEROIDS_VECTOR_FONT_HPP
 
+#include <sstream>
 #include "common.hpp"
 // Modelled on the classic Asteroids vector font, each char/digit is 30 x 50
+
+template <typename T>
+std::string lexical_cast(const T& value) {
+    try {
+        std::ostringstream sstr;
+        sstr << value;
+        return sstr.str();
+    } catch(std::exception e) {
+        return std::string();
+    }
+}
 
 class vector_font {
 public:

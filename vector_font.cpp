@@ -129,6 +129,8 @@ void vector_font::erase_string(size_t idx, bool compress) {
         std::transform(string_index_.begin()+idx, string_index_.end(), string_index_.begin()+idx, [&diff](const vec2i& v) {
             return v - vec2i(diff, diff);
         });
+
+        vertex_count_ = string_index_.empty() ? 0 : string_index_.back().y;
     } else {
         string_index_.erase(string_index_.begin() + idx);
     }
