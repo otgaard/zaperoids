@@ -5,6 +5,7 @@
 #include <renderer/camera.hpp>
 #include "vector_font.hpp"
 #include "world.hpp"
+#include "game.hpp"
 
 using namespace zap;
 using namespace zap::maths;
@@ -33,12 +34,6 @@ static const char* const vector_font_fshdr = GLSL(
         }
 );
 
-enum class game_state {
-    GS_MENU,
-    GS_PLAYING,
-    GS_PAUSED
-};
-
 class zaperoids : public application {
 public:
     zaperoids() : application("zaperoids", 600, 1024, false), cam_(false) { }
@@ -59,6 +54,7 @@ protected:
     world world_;
     program shdr_;
     ship_command command_;
+    game game_;
 };
 
 bool zaperoids::initialise() {
@@ -81,10 +77,12 @@ bool zaperoids::initialise() {
 
     world_.set_world_size(600,1024);    // For the generator
 
-    if(!world_.generate(1, 1)) {
+    if(!world_.generate()) {
         LOG_ERR("Failed to create world simulation");
         return false;
     }
+
+    world_.generate_level(&game_, 1);
 
     shdr_.bind();
 
@@ -98,10 +96,8 @@ void zaperoids::update(double t, float dt) {
 }
 
 void zaperoids::draw() {
-    //shdr_.bind();
     world_.draw(cam_, shdr_);
     font_.draw(cam_, shdr_);
-    //shdr_.release();
 }
 
 void zaperoids::shutdown() {

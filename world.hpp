@@ -4,6 +4,8 @@
 
 #include "common.hpp"
 
+class game;
+
 struct ship_command {
     bool thrust;
     bool left;
@@ -19,7 +21,9 @@ public:
     world();
     ~world();
 
-    bool generate(int level=1, int players=1);
+    bool generate();
+
+    bool generate_level(game* game_ptr, int level);
 
     void set_world_size(int width, int height);
 

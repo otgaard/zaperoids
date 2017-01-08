@@ -4,8 +4,8 @@
 #include <zap/maths/geometry/hull.hpp>
 #include <zap/maths/geometry/disc.hpp>
 #include <zap/maths/transform.hpp>
-
 #include <zap/maths/io.hpp>
+#include "game.hpp"
 
 using namespace zap;
 using namespace zap::maths;
@@ -14,6 +14,9 @@ using namespace zap::graphics;
 using namespace zap::maths::geometry;
 
 using zap::graphics::vtx_p2c3_t;
+
+using vbuf_bullet_t = vertex_buffer<vtx_p2c3_t, buffer_usage::BU_DYNAMIC_DRAW>;
+using mesh_bullet_t = mesh<vertex_stream<vbuf_bullet_t>, primitive_type::PT_POINTS>;
 
 // Could generate them using incremental hull, but for now, statically defined
 static const float TWO_PI_OVER_FIVE = float(TWO_PI)/5.f;
@@ -46,23 +49,27 @@ struct body {
 };
 
 struct bullet {
+    int owner;
     vec2f position;
     vec2f velocity;
     float distance_travelled;
 
-    bullet() : position(0.f, 0.f), velocity(0.f, 0.f), distance_travelled(0.f) { }
+    bullet(int owner=0) : position(0.f, 0.f), velocity(0.f, 0.f), distance_travelled(0.f) { }
     bullet(const bullet& rhs) = default;
     bullet& operator=(const bullet& rhs) = default;
 };
 
 struct world::state_t {
     int width, height;
-    vbuf_p2c3_t vbuf;
-    mesh_p2c3_ls_t mesh;
+    vbuf_p2c3_t vbuf_shapes;
+    mesh_p2c3_ls_t mesh_shapes;
+    vbuf_bullet_t vbuf_bullets;
+    mesh_bullet_t mesh_bullets;
     std::vector<body> ships;
     std::vector<body> asteroids;
-    std::vector<bullet> bullets;        // map the bullets to the vbuf range [1000,2000]
+    std::vector<bullet> bullets;
     rand_lcg rand;
+    game* game_ptr;
 };
 
 world::world() : state_(new state_t()), s(*state_) {
@@ -70,20 +77,46 @@ world::world() : state_(new state_t()), s(*state_) {
 
 world::~world() = default;
 
-bool world::generate(int level, int players) {
-    if(!s.vbuf.allocate() || !s.mesh.allocate()) {
+
+
+bool world::generate() {
+    if(!s.vbuf_shapes.allocate() || !s.mesh_shapes.allocate()) {
         LOG_ERR("Error allocating world GPU resources.");
         return false;
     }
 
-    s.mesh.set_stream(&s.vbuf);
-    s.mesh.bind(); s.vbuf.bind();
+    s.mesh_shapes.set_stream(&s.vbuf_shapes);
+    s.mesh_shapes.bind(); s.vbuf_shapes.bind();
 
-    s.vbuf.initialise(20000);       // Buffer of 20000 reserved vertices
+    s.vbuf_shapes.initialise(1000);
 
-    // Support up to 1000 bullets
-    s.bullets.reserve(1000);
+    if(s.vbuf_shapes.map(buffer_access::BA_WRITE_ONLY)) {
+        std::transform(ship_shape.begin(), ship_shape.end(), s.vbuf_shapes.begin(), [](const vec2f& sP) {
+            return vtx_p2c3_t(sP, vec3b(255,255,255));
+        });
 
+        std::transform(asteroid_shapes[0].begin(), asteroid_shapes[0].end(), s.vbuf_shapes.begin()+ship_shape.size(),
+                       [](const vec2f& aP) {
+                           return vtx_p2c3_t(aP, vec3b(255,255,255));
+                       });
+
+        s.vbuf_shapes.unmap();
+    }
+    s.mesh_shapes.release();
+
+    if(!s.vbuf_bullets.allocate() || !s.mesh_bullets.allocate()) {
+        LOG_ERR("Error allocating bullet GPU resources");
+        return false;
+    }
+
+    s.mesh_bullets.set_stream(&s.vbuf_bullets);
+    s.mesh_bullets.bind(); s.vbuf_bullets.bind();
+    s.vbuf_bullets.initialise(200);
+
+    return true;
+}
+
+bool world::generate_level(game* game_ptr, int level) {
     body player_ship;
     player_ship.transform.translate(vec2f(s.width/2.f, s.height/2.f));
     player_ship.velocity = vec2f(0,0);
@@ -100,24 +133,8 @@ bool world::generate(int level, int players) {
         s.asteroids.push_back(asteroid);
     }
 
-    if(s.vbuf.map(buffer_access::BA_WRITE_ONLY)) {
-        std::transform(ship_shape.begin(), ship_shape.end(), s.vbuf.begin(), [&player_ship](const vec2f& sP) {
-            return vtx_p2c3_t(sP, vec3b(255,255,255));
-        });
-
-        std::transform(asteroid_shapes[0].begin(), asteroid_shapes[0].end(), s.vbuf.begin()+100, [](const vec2f& aP) {
-            return vtx_p2c3_t(aP, vec3b(255,255,255));
-        });
-
-        std::for_each(s.vbuf.begin()+1000, s.vbuf.begin()+2000, [](auto& vtx) {
-            vtx.position.set(-100,-100);
-            vtx.colour1.set(255,0,0);
-        });
-
-        s.vbuf.unmap();
-    }
-    s.mesh.release();
-    return true;
+    // Allocate the bullets
+    s.bullets.reserve(200);
 }
 
 inline void wrap_position(vec2f& P, float width, float height) {
@@ -197,31 +214,33 @@ void world::update(double t, float dt) {
     if(ne != s.bullets.end()) s.bullets.erase(ne, s.bullets.end());
 
     // Update Buffer
-    s.vbuf.bind();
-    if(s.vbuf.map(buffer_access::BA_WRITE_ONLY)) {
-        std::transform(s.bullets.begin(), s.bullets.end(), s.vbuf.begin()+1000, [](const bullet& bP) {
+    s.vbuf_bullets.bind();
+    if(s.vbuf_bullets.map(buffer_access::BA_WRITE_ONLY)) {
+        std::transform(s.bullets.begin(), s.bullets.end(), s.vbuf_bullets.begin(), [](const bullet& bP) {
             return vtx_p2c3_t(bP.position, vec3b(255,255,255));
         });
-        s.vbuf.unmap();
+        s.vbuf_bullets.unmap();
     }
-    s.vbuf.release();
+    s.vbuf_bullets.release();
 }
 
 void world::draw(const camera& cam, program& shdr) {
-    s.mesh.bind();
+    s.mesh_shapes.bind();
     auto pvm_loc = shdr.uniform_location("PVM");
     shdr.bind_uniform(pvm_loc, cam.proj_view()*s.ships[0].transform.gl_matrix());
-    s.mesh.draw(primitive_type::PT_LINES, 0, ship_shape.size());
+    s.mesh_shapes.draw(primitive_type::PT_LINES, 0, ship_shape.size());
 
     for(auto& asteroid : s.asteroids) {
         shdr.bind_uniform(pvm_loc, cam.proj_view()*asteroid.transform.gl_matrix());
-        s.mesh.draw(primitive_type::PT_LINES, 100, asteroid_shapes[0].size());
+        s.mesh_shapes.draw(primitive_type::PT_LINES, ship_shape.size(), asteroid_shapes[0].size());
     }
+    s.mesh_shapes.release();
 
+    s.mesh_bullets.bind();
     shdr.bind_uniform(pvm_loc, cam.proj_view());
-    if(s.bullets.size() > 0) s.mesh.draw(primitive_type::PT_POINTS, 1000, s.bullets.size());
+    if(s.bullets.size() > 0) s.mesh_shapes.draw(primitive_type::PT_POINTS, 0, s.bullets.size());
 
-    s.mesh.release();
+    s.mesh_bullets.release();
 }
 
 void world::command(int player, const ship_command& cmd) {
@@ -230,8 +249,8 @@ void world::command(int player, const ship_command& cmd) {
     if(cmd.thrust) s.ships[player].velocity += s.ships[player].transform.rotation().col(1);
     if(cmd.left)   s.ships[player].orientation += +.1f;
     if(cmd.right)  s.ships[player].orientation += -.1f;
-    if(cmd.fire && s.bullets.size() < 1000) {   // 1000 for now
-        auto b = bullet();
+    if(cmd.fire && s.bullets.size() < 200) {
+        auto b = bullet(player);
         b.position = s.ships[player].transform.affine().transform(bullet_emit_pos);
         b.velocity = 500*s.ships[player].transform.rotation().col(1) + s.ships[player].velocity;
         s.bullets.push_back(b);
