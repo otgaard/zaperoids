@@ -70,6 +70,8 @@ struct world::state_t {
     std::vector<bullet> bullets;
     rand_lcg rand;
     game* game_ptr;
+    bool regenerating;  // simple switch indicating that player has died and must be respawned
+    float regen_time;
 };
 
 world::world() : state_(new state_t()), s(*state_) {
@@ -137,6 +139,7 @@ bool world::generate_level(game* game_ptr, int level) {
 
     // Allocate the bullets
     s.bullets.reserve(200);
+    return true;
 }
 
 inline void wrap_position(vec2f& P, float width, float height) {
@@ -224,6 +227,45 @@ void world::update(double t, float dt) {
     });
     if(ne != s.bullets.end()) s.bullets.erase(ne, s.bullets.end());
 
+
+    // Check ship vs asteroid collisions
+    if(!s.regenerating) {
+        float min = std::numeric_limits<float>::max();
+        for(auto& a : s.asteroids) {
+            auto dd = maths::geometry::disc<float>(a.transform.translation(), a.transform.uniform_scale());
+            auto sd = maths::geometry::disc<float>(player_ship.transform.translation(), 10.f);
+            auto dist = distance(dd, sd);
+            if(dist < min) min = dist;
+            if(distance(dd, sd) <= 15.f) {
+                s.regen_time = 2.f;
+                s.regenerating = true;
+                s.game_ptr->kill(0);
+            }
+        }
+    } else {
+        s.regen_time -= dt;
+        if(s.regen_time < 0.f) {
+            for(int i = 0; i != 10; ++i) {
+                bool too_close = false;
+                auto new_pos = vec2f(50.f + s.rand.random() * (s.width-50.f), 50.f + s.rand.random() * (s.height-50.f));
+                for(auto& a : s.asteroids) {
+                    auto d = maths::geometry::disc<float>(a.transform.translation(), a.transform.uniform_scale());
+                    if(distance(new_pos, d) < 150.f) {
+                        too_close = true;
+                        break;
+                    }
+                }
+                if(!too_close) {
+                    player_ship.transform.translate(new_pos);
+                    player_ship.orientation = 0.f;
+                    player_ship.rotation = 0.f;
+                    player_ship.velocity.set(0.f, 0.f);
+                    s.regenerating = false;
+                }
+            }
+        }
+    }
+
     // Update Buffer
     s.vbuf_bullets.bind();
     if(s.vbuf_bullets.map(buffer_access::BA_WRITE_ONLY)) {
@@ -239,7 +281,7 @@ void world::draw(const camera& cam, program& shdr) {
     s.mesh_shapes.bind();
     auto pvm_loc = shdr.uniform_location("PVM");
     shdr.bind_uniform(pvm_loc, cam.proj_view()*s.ships[0].transform.gl_matrix());
-    s.mesh_shapes.draw(primitive_type::PT_LINES, 0, ship_shape.size());
+    if(!s.regenerating) s.mesh_shapes.draw(primitive_type::PT_LINES, 0, ship_shape.size());
 
     for(auto& asteroid : s.asteroids) {
         shdr.bind_uniform(pvm_loc, cam.proj_view()*asteroid.transform.gl_matrix());

@@ -88,19 +88,27 @@ bool zaperoids::initialise() {
 }
 
 void zaperoids::update(double t, float dt) {
-    world_.command(0, command_);
-    world_.update(t, dt);
-    command_.fire = false;
+    // Check if the game is over
+    if(game_.game_over()) {
+        std::string game_over = std::string("Game Over");
+        auto aabb = font_.string_AABB(game_over);
+        if(score_string_ != size_t(-1)) font_.erase_string(score_string_);
+        score_string_ = font_.insert_string(vec2f(600 - aabb.width(), 1024 - aabb.height())/2.f, game_over);
+    } else {
+        world_.command(0, command_);
+        world_.update(t, dt);
+        command_.fire = false;
 
-    // Update the score
-    std::string score = std::string("Score ") + lexical_cast<int>(game_.get_points(0));
-    auto aabb = font_.string_AABB(score);
-    if(score_string_ != size_t(-1)) font_.erase_string(score_string_);
-    score_string_ = font_.insert_string(vec2f(600 - 20 - aabb.width(), 1024 - 10 - aabb.height()), score);
+        // Update the score
+        std::string score = std::string("Score ") + lexical_cast<int>(game_.get_points(0));
+        auto aabb = font_.string_AABB(score);
+        if(score_string_ != size_t(-1)) font_.erase_string(score_string_);
+        score_string_ = font_.insert_string(vec2f(600 - 20 - aabb.width(), 1024 - 10 - aabb.height()), score);
+    }
 }
 
 void zaperoids::draw() {
-    world_.draw(cam_, shdr_);
+    if(!game_.game_over()) world_.draw(cam_, shdr_);
     font_.draw(cam_, shdr_);
 }
 
